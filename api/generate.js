@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,7 +19,7 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY가 설정되지 않았습니다.' });
+      return res.status(500).json({ error: 'GEMINI_API_KEY 환경변수가 설정되지 않았습니다.' });
     }
 
     const { prompt } = req.body;
@@ -29,20 +27,44 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'prompt가 없습니다.' });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // AQ. 키와 완벽히 호환되는 최신 2.0 플래시 모델로 지정
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // SDK를 거치지 않고 구글 제미나이 REST API 엔드포인트를 직접 호출
+    const apiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ]
+        }),
+      }
+    );
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const data = await apiResponse.json();
+
+    if (!apiResponse.ok) {
+      return res.status(500).json({ 
+        error: 'Gemini API 호출 실패', 
+        details: data.error?.message || JSON.stringify(data) 
+      });
+    }
+
+    // 응답 텍스트 추출
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      return res.status(500).json({ error: '응답 데이터에서 텍스트를 추출할 수 없습니다.', details: data });
+    }
 
     return res.status(200).json({ result: text });
   } catch (error) {
-    console.error('Gemini API Error Detail:', error);
+    console.error('Server Error:', error);
     return res.status(500).json({ 
-      error: 'Gemini API 호출 실패', 
+      error: '서버 내부 오류 발생', 
       details: error.message || error.toString() 
     });
   }
