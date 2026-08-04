@@ -1,7 +1,7 @@
 {
   "name": "gemini-backend",
   "version": "1.0.0",
-  "private": true,
+  "main": "api/generate.js",
   "dependencies": {
     "@google/genai": "^0.1.1"
   }
