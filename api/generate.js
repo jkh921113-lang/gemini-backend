@@ -31,8 +31,8 @@ export default async function handler(req, res) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // 모델명을 가장 범용적인 최신 버전으로 지정
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }, { apiVersion: 'v1' });
+    // AQ. 키와 완벽히 호환되는 최신 2.0 플래시 모델로 지정
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ result: text });
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    console.error('Gemini API Error Detail:', error);
     return res.status(500).json({ 
       error: 'Gemini API 호출 실패', 
       details: error.message || error.toString() 
