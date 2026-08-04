@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
-  // CORS 에러 방지용 헤더
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -10,7 +9,6 @@ export default async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
-  // 브라우저의 사전 요청(Preflight) 처리
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -23,17 +21,18 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Vercel 환경변수에 GEMINI_API_KEY가 없습니다.' });
+      return res.status(500).json({ error: 'GEMINI_API_KEY가 설정되지 않았습니다.' });
     }
 
     const { prompt } = req.body;
     if (!prompt) {
-      return res.status(400).json({ error: '요청에 prompt 내용이 없습니다.' });
+      return res.status(400).json({ error: 'prompt가 없습니다.' });
     }
 
-    // 구글 AI SDK 초기화 및 올바른 모델 호출 문법
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    // 모델명을 가장 범용적인 최신 버전으로 지정
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }, { apiVersion: 'v1' });
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -41,9 +40,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ result: text });
   } catch (error) {
-    console.error('Gemini API Error Detail:', error);
+    console.error('Gemini API Error:', error);
     return res.status(500).json({ 
-      error: 'Gemini API 호출 중 오류가 발생했습니다.', 
+      error: 'Gemini API 호출 실패', 
       details: error.message || error.toString() 
     });
   }
