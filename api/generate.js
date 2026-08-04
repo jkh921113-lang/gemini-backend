@@ -27,9 +27,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'prompt가 없습니다.' });
     }
 
-    // SDK를 거치지 않고 구글 제미나이 REST API 엔드포인트를 직접 호출
+    // 안정적인 최신 표준 모델명(gemini-2.0-flash)으로 직접 호출
     const apiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
