@@ -1,7 +1,7 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req, res) {
-  // CORS 헤더 설정
+  // CORS 에러 방지용 헤더
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -10,41 +10,41 @@ export default async function handler(req, res) {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
-  // 브라우저 사전 확인 요청(OPTIONS) 처리
+  // 브라우저의 사전 요청(Preflight) 처리
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
-  // POST 요청 처리
-  if (req.method === 'POST') {
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-
-      // API 키 존재 여부 검증
-      if (!apiKey) {
-        return res.status(500).json({ 
-          error: 'Vercel 환경변수에 GEMINI_API_KEY가 설정되지 않았습니다.' 
-        });
-      }
-
-      // SDK 인스턴스 생성 및 모델 지정
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-      const { prompt } = req.body;
-      const result = await model.generateContent(prompt || 'Hello');
-      const responseText = await result.response.text();
-
-      return res.status(200).json({ result: responseText });
-    } catch (error) {
-      console.error('Gemini API Error Detail:', error);
-      return res.status(500).json({
-        error: 'Gemini API 호출 중 오류가 발생했습니다.',
-        details: error.message
-      });
-    }
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'POST 요청만 허용됩니다.' });
   }
 
-  return res.status(405).json({ error: 'Method Not Allowed' });
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Vercel 환경변수에 GEMINI_API_KEY가 없습니다.' });
+    }
+
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: '요청에 prompt 내용이 없습니다.' });
+    }
+
+    // 구글 AI SDK 초기화 및 올바른 모델 호출 문법
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    return res.status(200).json({ result: text });
+  } catch (error) {
+    console.error('Gemini API Error Detail:', error);
+    return res.status(500).json({ 
+      error: 'Gemini API 호출 중 오류가 발생했습니다.', 
+      details: error.message || error.toString() 
+    });
+  }
 }
